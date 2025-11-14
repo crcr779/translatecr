@@ -1,0 +1,21 @@
+{
+  "name": "voice-translate-netlify-deepseek",
+  "version": "1.0.0",
+  "description": "语音翻译应用，使用 DeepSeek API 进行翻译",
+  "main": "index.html",
+  "scripts": {
+    "build": "echo 'No build step required'"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {},
+  "keywords": [
+    "translation",
+    "speech",
+    "deepseek",
+    "netlify"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}

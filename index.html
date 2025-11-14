@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>语音翻译工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .input-section, .output-section {
+            margin-bottom: 30px;
+        }
+        
+        h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+        }
+        
+        .language-selector {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .lang-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .lang-btn.active {
+            border-color: #4facfe;
+            background: #4facfe;
+            color: white;
+        }
+        
+        .voice-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+        
+        .btn-primary {
+            background: #4facfe;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #3a9bf8;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .btn-secondary:hover {
+            background: #e9ecef;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .text-area {
+            width: 100%;
+            min-height: 120px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            resize: vertical;
+            font-family: inherit;
+        }
+        
+        .text-area:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+        
+        .output-box {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 100px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 10px;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .loading {
+            color: #4facfe;
+        }
+        
+        .error {
+            color: #e74c3c;
+        }
+        
+        .success {
+            color: #27ae60;
+        }
+        
+        @media (max-width: 600px) {
+            .content {
+                padding: 20px;
+            }
+            
+            .voice-controls {
+                flex-direction: column;
+            }
+            
+            .language-selector {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎤 语音翻译</h1>
+            <p>支持英语、日语语音输入，实时翻译为中文</p>
+        </div>
+        
+        <div class="content">
+            <div class="input-section">
+                <h2>输入语言</h2>
+                <div class="language-selector">
+                    <button class="lang-btn active" data-lang="en-US">英语</button>
+                    <button class="lang-btn" data-lang="ja-JP">日语</button>
+                </div>
+                
+                <div class="voice-controls">
+                    <button class="btn btn-primary" id="startBtn">
+                        🎤 开始录音
+                    </button>
+                    <button class="btn btn-secondary" id="stopBtn" disabled>
+                        ⏹️ 停止录音
+                    </button>
+                </div>
+                
+                <textarea 
+                    class="text-area" 
+                    id="inputText" 
+                    placeholder="点击上方开始录音，或直接在此输入文本..."
+                ></textarea>
+                
+                <button class="btn btn-primary" id="translateBtn" style="width: 100%; margin-top: 10px;">
+                    🔄 翻译成中文
+                </button>
+            </div>
+            
+            <div class="output-section">
+                <h2>翻译结果</h2>
+                <div class="output-box" id="outputText">
+                    翻译结果将显示在这里...
+                </div>
+            </div>
+            
+            <div class="status" id="status"></div>
+        </div>
+    </div>
+
+    <script>
+        class VoiceTranslator {
+            constructor() {
+                this.recognition = null;
+                this.isRecording = false;
+                this.currentLanguage = 'en-US';
+                this.audioChunks = [];
+                
+                this.initializeElements();
+                this.setupEventListeners();
+                this.checkBrowserSupport();
+            }
+            
+            initializeElements() {
+                this.startBtn = document.getElementById('startBtn');
+                this.stopBtn = document.getElementById('stopBtn');
+                this.translateBtn = document.getElementById('translateBtn');
+                this.inputText = document.getElementById('inputText');
+                this.outputText = document.getElementById('outputText');
+                this.status = document.getElementById('status');
+                this.langButtons = document.querySelectorAll('.lang-btn');
+            }
+            
+            setupEventListeners() {
+                this.startBtn.addEventListener('click', () => this.startRecording());
+                this.stopBtn.addEventListener('click', () => this.stopRecording());
+                this.translateBtn.addEventListener('click', () => this.translateText());
+                
+                this.langButtons.forEach(btn => {
+                    btn.addEventListener('click', (e) => this.setLanguage(e.target));
+                });
+            }
+            
+            checkBrowserSupport() {
+                if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                    this.showStatus('您的浏览器不支持语音识别功能，请使用 Chrome 浏览器', 'error');
+                    this.startBtn.disabled = true;
+                }
+            }
+            
+            setLanguage(button) {
+                this.langButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                this.currentLanguage = button.dataset.lang;
+                this.showStatus(`已切换到${button.textContent}`, 'success');
+            }
+            
+            startRecording() {
+                if (this.isRecording) return;
+                
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                this.recognition = new SpeechRecognition();
+                
+                this.recognition.continuous = false;
+                this.recognition.interimResults = true;
+                this.recognition.lang = this.currentLanguage;
+                
+                this.recognition.onstart = () => {
+                    this.isRecording = true;
+                    this.startBtn.disabled = true;
+                    this.stopBtn.disabled = false;
+                    this.showStatus('正在录音...', 'loading');
+                };
+                
+                this.recognition.onresult = (event) => {
+                    let transcript = '';
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        if (event.results[i].isFinal) {
+                            transcript += event.results[i][0].transcript;
+                        } else {
+                            transcript += event.results[i][0].transcript;
+                        }
+                    }
+                    this.inputText.value = transcript;
+                };
+                
+                this.recognition.onerror = (event) => {
+                    this.showStatus(`录音错误: ${event.error}`, 'error');
+                    this.stopRecording();
+                };
+                
+                this.recognition.onend = () => {
+                    this.stopRecording();
+                };
+                
+                this.recognition.start();
+            }
+            
+            stopRecording() {
+                if (this.recognition && this.isRecording) {
+                    this.recognition.stop();
+                    this.isRecording = false;
+                    this.startBtn.disabled = false;
+                    this.stopBtn.disabled = true;
+                    this.showStatus('录音完成', 'success');
+                }
+            }
+            
+            async translateText() {
+                const text = this.inputText.value.trim();
+                if (!text) {
+                    this.showStatus('请输入要翻译的文本', 'error');
+                    return;
+                }
+                
+                this.showStatus('翻译中...', 'loading');
+                this.translateBtn.disabled = true;
+                
+                try {
+                    const response = await fetch('/.netlify/functions/translate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ text })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.translation) {
+                        this.outputText.textContent = data.translation;
+                        this.showStatus('翻译完成', 'success');
+                    } else {
+                        throw new Error(data.error || '翻译失败');
+                    }
+                } catch (error) {
+                    console.error('Translation error:', error);
+                    this.showStatus(`翻译错误: ${error.message}`, 'error');
+                    this.outputText.textContent = '翻译失败，请重试';
+                } finally {
+                    this.translateBtn.disabled = false;
+                }
+            }
+            
+            showStatus(message, type = '') {
+                this.status.textContent = message;
+                this.status.className = 'status';
+                if (type) {
+                    this.status.classList.add(type);
+                }
+            }
+        }
+        
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', () => {
+            new VoiceTranslator();
+        });
+    </script>
+</body>
+</html>
